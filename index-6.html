@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>☀️ SOLAR PILOT</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02050b;color:#fff;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+button{font:inherit;color:inherit;border:1px solid #ffffff38;background:#071222d9;border-radius:12px;padding:11px 16px;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 5px 20px #0008}
+button:hover{background:#102442}.hidden{display:none!important}
+#menu{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#241000aa,#02050bee 60%);z-index:20}
+.panel{width:min(680px,92vw);padding:32px;border:1px solid #ffb13b55;border-radius:24px;background:#050a14dd;box-shadow:0 0 80px #ff6a0030}
+h1{font-size:clamp(38px,8vw,76px);margin:0 0 5px;letter-spacing:4px;text-shadow:0 0 30px #ff8a00}
+.sub{color:#b8c9df;margin:0 0 26px}.menuBtns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.menuBtns button{font-size:20px;padding:18px;border-color:#ffae5066}.tip{margin-top:20px;color:#8395ad;font-size:13px;line-height:1.6}
+#hud{position:fixed;left:14px;top:12px;z-index:5;min-width:235px;padding:12px 14px;border:1px solid #ffffff24;border-radius:13px;background:#030711b8;backdrop-filter:blur(8px);font-size:13px;line-height:1.7}
+#hud b{color:#ffd27b}#mode{color:#8ee9ff}#found{color:#8cffb0}
+#targetInfo{position:fixed;left:50%;top:calc(50% + 82px);transform:translateX(-50%);z-index:7;text-align:center;min-width:250px;padding:8px 14px;border-radius:13px;background:#020711c9;border:1px solid #ffffff22;opacity:.2;transition:.15s}
+#targetInfo.lock{opacity:1;border-color:#70ffbd88;box-shadow:0 0 25px #00ff9d2b}
+#targetInfo b{color:#7dffbf}
+#hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;color:#dbe7f5;background:#030711aa;border-radius:12px;padding:8px 12px;font-size:12px;text-align:center}
+#controls{position:fixed;right:14px;bottom:14px;z-index:8;display:grid;grid-template-columns:repeat(3,58px);gap:7px}
+#controls button{height:52px;padding:0;font-size:20px}.boost{grid-column:1/4!important;font-size:15px!important}
+#back{position:fixed;right:14px;top:14px;z-index:8}
+#learn{position:fixed;right:14px;top:64px;z-index:8}
+#card{position:fixed;right:14px;top:118px;width:min(330px,calc(100vw - 28px));z-index:9;padding:16px;border:1px solid #ffb34a55;border-radius:16px;background:#050b16ee;box-shadow:0 12px 45px #000b;display:none}
+#card.show{display:block}.cardTitle{font-size:20px;color:#ffd079;margin-bottom:6px}.cardText{font-size:14px;line-height:1.65;color:#dbe5f2}
+#inside{position:fixed;inset:0;z-index:6;display:none;pointer-events:none}
+#inside.active{display:block}.insideTitle{position:absolute;top:15px;left:50%;transform:translateX(-50%);padding:9px 15px;border:1px solid #ffbd6666;border-radius:12px;background:#060b16dd}
+.layer{position:absolute;transform:translate(-50%,-50%);border-radius:50%;display:grid;place-items:center;text-align:center;pointer-events:auto;cursor:pointer;user-select:none;font-weight:700}
+#quiz{position:fixed;inset:0;z-index:30;background:#02050bf7;display:none;overflow:auto;padding:30px 16px}
+#quiz .qwrap{width:min(720px,100%);margin:0 auto}.qwrap h2{color:#ffd078}.qbox{font-size:22px;line-height:1.4;margin:25px 0}.answers{display:grid;gap:10px}.answers button{text-align:left}.result{margin-top:18px;padding:13px;border-radius:12px;background:#071323;line-height:1.6}.next{margin-top:14px}
+#quizClose{float:right}
+@media(max-width:600px){#hud{font-size:11px;min-width:190px}.menuBtns{grid-template-columns:1fr}.panel{padding:24px}.hint{font-size:11px}#targetInfo{top:calc(50% + 72px)}}
+</style>
+</head>
+<body>
+<canvas id="space"></canvas>
+
+<div id="menu">
+ <div class="panel">
+  <h1>☀️ SOLAR PILOT</h1>
+  <p class="sub">飛び込め。狙え。観察せよ。<br>中3理科「天体」を体験する太陽探査ゲーム</p>
+  <div class="menuBtns">
+   <button id="startExplore">🔭 調べるモード</button>
+   <button id="startQuiz">🧠 クイズモード</button>
+  </div>
+  <div class="tip">PC：ドラッグで視点移動 / ↑↓で距離変更 / ←→で旋回<br>スマホ：スワイプ＋画面ボタン / BOOSTで高速移動<br>中央の「十字＋リング」を特徴に合わせると発見できます。</div>
+ </div>
+</div>
+
+<div id="hud" class="hidden">
+ <div>MODE：<span id="mode">観察</span></div>
+ <div>距離：<b id="dist">6.0 R☉</b></div>
+ <div>速度：<b id="speed">0.00 R☉/s</b></div>
+ <div>方位：<b id="az">0°</b>　上下：<b id="el">0°</b></div>
+ <div>発見：<b id="found">0 / 5</b></div>
+</div>
+<div id="targetInfo">照準：周囲を探しています…</div>
+<div id="hint" class="hidden">中央の照準を黒点・プロミネンス・フレアへ。近づくほど太陽内部が見えてきます。</div>
+<button id="back" class="hidden">← メニュー</button>
+<button id="learn" class="hidden">📖 学習カード</button>
+<div id="card"><div class="cardTitle"></div><div class="cardText"></div></div>
+
+<div id="controls" class="hidden">
+ <button data-key="up">↑</button><button data-key="left">←</button><button data-key="down">↓</button>
+ <button data-key="right">→</button><button data-key="closer">＋</button><button data-key="farther">−</button>
+ <button class="boost" data-key="boost">⚡ BOOST</button>
+</div>
+
+<div id="inside">
+ <div class="insideTitle">☀️ 太陽内部モード — クリックして構造を学ぼう</div>
+</div>
+
+<div id="quiz">
+ <div class="qwrap">
+  <button id="quizClose">← メニュー</button>
+  <h1>🧠 SOLAR PILOT QUIZ</h1>
+  <div id="qnum"></div><div class="qbox" id="question"></div>
+  <div class="answers" id="answers"></div>
+  <div class="result" id="result" style="display:none"></div>
+  <button class="next" id="next" style="display:none">次の問題 →</button>
+ </div>
+</div>
+
+<script>
+const canvas=document.getElementById('space'),ctx=canvas.getContext('2d');
+let W,H,DPR=1, running=false, last=0, dist=6, az=0, el=0, boost=false, speed=0;
+let dragging=false,lx=0,ly=0, found=new Set(), hovered=null, flash=0;
+
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener('resize',resize);resize();
+
+const stars=Array.from({length:220},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.7+.2,a:Math.random()*.8+.2}));
+const features=[
+ {id:'spot1',type:'黒点①',name:'黒点①',lon:-42,lat:10,size:0.075,desc:'黒点は周囲の光球より温度が低いため暗く見える。強い磁場が関係している。'},
+ {id:'spot2',type:'黒点②',name:'黒点②',lon:75,lat:-16,size:0.06,desc:'黒点は太陽表面に見える暗い部分。太陽の自転によって見える位置が変化する。'},
+ {id:'spot3',type:'黒点③',name:'黒点③',lon:150,lat:23,size:0.055,desc:'黒点の観察は、太陽が自転していることを確かめる手がかりになる。'},
+ {id:'prom',type:'プロミネンス',name:'プロミネンス',lon:12,lat:55,size:0.11,desc:'プロミネンスは太陽の縁から炎のように伸びて見える巨大なガスの構造。'},
+ {id:'flare',type:'フレア',name:'フレア',lon:-130,lat:-25,size:0.09,desc:'フレアは太陽表面付近で起こる大規模な爆発現象で、短時間に大量のエネルギーが放出される。'}
+];
+const keys={};
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function norm(a){return ((a+180)%360+360)%360-180}
+function angleDist(a,b){return Math.abs(norm(a-b))}
+function featurePos(f,t){
+ let lon=f.lon + (t*.018*(f.id==='spot1'?1:f.id==='spot2'?.8:1.1));
+ if(f.id==='prom') lon += Math.sin(t*.8)*3;
+ if(f.id==='flare') lon += Math.sin(t*.45)*1.5;
+ let lat=f.lat+(f.id==='prom'?Math.sin(t*1.6)*5:0);
+ // angular coordinates relative to camera; simple spherical projection with true camera-relative longitude/latitude
+ let dl=norm(lon-az), de=lat-el;
+ let front=Math.cos(dl*Math.PI/180)*Math.cos(de*Math.PI/180);
+ if(front<=0) return null;
+ let scale=(0.78/(dist*.38+0.55));
+ let x=W/2 + Math.sin(dl*Math.PI/180)*scale*W*.58;
+ let y=H/2 - Math.sin(de*Math.PI/180)*scale*H*.62;
+ let size=Math.max(5,f.size*W*scale*(1.8));
+ return {x,y,size,front,dl,de,lon,lat};
+}
+function sunRadius(){return Math.min(W,H)*.30/(1+dist*.08)}
+function drawSpace(t){
+ ctx.clearRect(0,0,W,H);
+ let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,'#071124');g.addColorStop(1,'#010207');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ for(const s of stars){ctx.globalAlpha=s.a*(.5+.5*Math.sin(t*.0008+s.x*20));ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+ if(!running)return;
+ let r=sunRadius();
+ // corona
+ let cg=ctx.createRadialGradient(W/2,H/2,r*.65,W/2,H/2,r*2.15);
+ cg.addColorStop(0,'#fff5bd');cg.addColorStop(.34,'#ffb52e99');cg.addColorStop(.7,'#ff6b0022');cg.addColorStop(1,'transparent');
+ ctx.fillStyle=cg;ctx.beginPath();ctx.arc(W/2,H/2,r*2.15,0,Math.PI*2);ctx.fill();
+ // transparency increases smoothly as approaching: 6R -> opaque, 0.7R -> deep inside
+ let inside=clamp((1.55-dist)/.85,0,1);
+ let surfaceAlpha=1-inside*.78;
+ let sg=ctx.createRadialGradient(W/2-r*.2,H/2-r*.2,0,W/2,H/2,r*1.2);
+ sg.addColorStop(0,`rgba(255,244,176,${surfaceAlpha})`);
+ sg.addColorStop(.45,`rgba(255,167,28,${surfaceAlpha})`);
+ sg.addColorStop(1,`rgba(210,55,4,${surfaceAlpha*.92})`);
+ ctx.fillStyle=sg;ctx.beginPath();ctx.arc(W/2,H/2,r,0,Math.PI*2);ctx.fill();
+ // granular surface
+ ctx.save();ctx.beginPath();ctx.arc(W/2,H/2,r,0,Math.PI*2);ctx.clip();
+ for(let i=0;i<180;i++){let a=i*2.399+t*.00003, rr=Math.sqrt((i%37)/37)*r*.95;let x=W/2+Math.cos(a)*rr,y=H/2+Math.sin(a)*rr;let q=2+((i*17)%8);ctx.fillStyle=`rgba(255,${130+(i%70)},${40+(i%50)},${.10+(.2*(1-inside))})`;ctx.beginPath();ctx.arc(x,y,q,0,Math.PI*2);ctx.fill()}
+ // magnetic-ish arcs / glow
+ ctx.restore();
+ // features on surface, only when near enough
+ for(const f of features){
+   let p=featurePos(f,t);if(!p)continue;
+   if(f.id==='prom'){
+    drawProminence(p,t,r);
+   }else if(f.id==='flare'){
+    drawFlare(p,t);
+   }else{
+    let rr=Math.max(4,p.size);
+    ctx.fillStyle='#3a1708';ctx.shadowColor='#050000';ctx.shadowBlur=7;
+    ctx.beginPath();ctx.ellipse(p.x,p.y,rr*1.25,rr*.8,.3,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle='#8d3b13aa';ctx.lineWidth=1;ctx.stroke();
+   }
+   // feature label when reasonably close to center/surface
+   if(dist<3.8){
+    ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff3c4';ctx.strokeStyle='#000';ctx.lineWidth=4;
+    ctx.strokeText(f.name,p.x,p.y-p.size-8);ctx.fillText(f.name,p.x,p.y-p.size-8);
+   }
+ }
+ // Internal layers: smooth reveal from distance, not a sudden switch
+ if(inside>0){
+   drawInternal(r,inside,t);
+ }
+ drawCrosshair(t);
+}
+function drawProminence(p,t,r){
+ let pulse=.8+.2*Math.sin(t*.005);
+ ctx.save();ctx.translate(p.x,p.y);ctx.rotate(Math.atan2(p.y-H/2,p.x-W/2)+Math.PI/2);
+ ctx.shadowColor='#ff5b00';ctx.shadowBlur=18;
+ ctx.strokeStyle=`rgba(255,100,12,${.8*pulse})`;ctx.lineWidth=Math.max(3,r*.025);
+ ctx.beginPath();ctx.moveTo(-r*.03,0);
+ ctx.bezierCurveTo(-r*.28,-r*.18,-r*.30,-r*.62,-r*.05,-r*.92);
+ ctx.bezierCurveTo(r*.18,-r*.64,r*.05,-r*.36,r*.20,-r*.12);
+ ctx.bezierCurveTo(r*.34,-r*.42,r*.28,-r*.72,r*.05,-r*.98);ctx.stroke();
+ ctx.strokeStyle='#ffd15a';ctx.lineWidth=Math.max(1,r*.009);ctx.stroke();ctx.restore();
+}
+function drawFlare(p,t){
+ let s=1+.28*Math.sin(t*.012)+.12*Math.sin(t*.031);
+ ctx.save();ctx.translate(p.x,p.y);ctx.globalCompositeOperation='lighter';
+ let gr=ctx.createRadialGradient(0,0,0,0,0,28*s);gr.addColorStop(0,'#fff');gr.addColorStop(.2,'#ffd35b');gr.addColorStop(.6,'#ff5c00aa');gr.addColorStop(1,'transparent');
+ ctx.fillStyle=gr;ctx.beginPath();ctx.arc(0,0,28*s,0,Math.PI*2);ctx.fill();
+ for(let i=0;i<7;i++){let a=i*.9+t*.003;ctx.strokeStyle='#ffcf52aa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*35*s,Math.sin(a)*35*s);ctx.stroke()}ctx.restore();
+}
+function drawInternal(r,inside,t){
+ // interior appears through surface progressively
+ ctx.save();ctx.globalAlpha=inside*.96;
+ let coreR=r*.33, radR=r*.64, convR=r*.86;
+ let layers=[
+  [convR,'#b94509'],[radR,'#d96d17'],[coreR,'#ffe58a']
+ ];
+ for(const [rr,c] of layers){ctx.fillStyle=c;ctx.beginPath();ctx.arc(W/2,H/2,rr,0,Math.PI*2);ctx.fill()}
+ // convection cells
+ ctx.globalAlpha=inside*.55;
+ for(let i=0;i<28;i++){let a=i*2.4+t*.0007,rr=radR*.55*(.55+(i%4)/5);let x=W/2+Math.cos(a)*rr,y=H/2+Math.sin(a)*rr;ctx.strokeStyle='#ffb02a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,10+inside*8,0,Math.PI*2);ctx.stroke()}
+ ctx.globalAlpha=inside;
+ ctx.strokeStyle='#fff0b0';ctx.lineWidth=2;ctx.beginPath();ctx.arc(W/2,H/2,coreR,0,Math.PI*2);ctx.stroke();
+ ctx.restore();
+ // labels only when sufficiently transparent
+ if(inside>.34){
+  ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff';
+  const labels=[
+   [W/2,H/2,'核'],[W/2,H/2-coreR-18,'放射層'],[W/2,H/2-r*.70,'対流層'],[W/2,H/2-r*.94,'光球']
+  ];
+  for(const [x,y,s] of labels){ctx.fillText(s,x,y)}
+ }
+}
+function drawCrosshair(t){
+ let cx=W/2,cy=H/2, lock=hovered;
+ ctx.save();ctx.translate(cx,cy);
+ let col=lock?'#66ffb1':'#d8f3ff';let pulse=1+Math.sin(t*.006)*.05;
+ ctx.strokeStyle=col;ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(0,0,31*pulse,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-46,0);ctx.lineTo(-17,0);ctx.moveTo(17,0);ctx.lineTo(46,0);ctx.moveTo(0,-46);ctx.lineTo(0,-17);ctx.moveTo(0,17);ctx.lineTo(0,46);ctx.stroke();
+ ctx.fillStyle=col;ctx.beginPath();ctx.arc(0,0,2.5,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
+function updateTarget(t){
+ let best=null,bestScore=Infinity;
+ for(const f of features){let p=featurePos(f,t);if(!p)continue;let d=Math.hypot(p.x-W/2,p.y-H/2);if(d<bestScore){bestScore=d;best={f,p}}}
+ const el=document.getElementById('targetInfo');
+ if(best && bestScore<Math.min(W,H)*.13){
+  hovered=best.f;el.classList.add('lock');
+  const exact=bestScore<Math.min(W,H)*.055;
+  el.innerHTML=exact?`◎ <b>${best.f.name}</b>　照準中！`:`△ ${best.f.name} に接近中…`;
+  if(exact && !found.has(best.f.id)){found.add(best.f.id);showCard(best.f)}
+ }else{hovered=null;el.classList.remove('lock');el.textContent='照準：周囲を探しています…'}
+ document.getElementById('found').textContent=`${found.size} / 5`;
+}
+function showCard(f){
+ const card=document.getElementById('card');card.querySelector('.cardTitle').textContent='🔎 '+f.name+' を発見！';card.querySelector('.cardText').textContent=f.desc;card.classList.add('show');flash=1;
+ setTimeout(()=>card.classList.remove('show'),7000);
+}
+function step(dt){
+ let base=.55*dt*(boost?3.5:1);
+ if(keys.up||keys.closer)dist=clamp(dist-base,.38,8);
+ if(keys.down||keys.farther)dist=clamp(dist+base,.38,8);
+ if(keys.left)az-=75*dt*(boost?2:1);if(keys.right)az+=75*dt*(boost?2:1);
+ if(keys.w)el=clamp(el+55*dt,-65,65);if(keys.s)el=clamp(el-55*dt,-65,65);
+ speed=base/dt;
+}
+function loop(t){let dt=Math.min(.05,(t-last)/1000||.016);last=t;if(running){step(dt);updateTarget(t);drawSpace(t);document.getElementById('dist').textContent=dist.toFixed(2)+' R☉';document.getElementById('speed').textContent=speed.toFixed(2)+' R☉/s';document.getElementById('az').textContent=((az%360+360)%360).toFixed(0)+'°';document.getElementById('el').textContent=el.toFixed(0)+'°';}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+
+function startExplore(){running=true;document.getElementById('menu').classList.add('hidden');['hud','controls','back','learn','hint'].forEach(id=>document.getElementById(id).classList.remove('hidden'))}
+document.getElementById('startExplore').onclick=startExplore;
+document.getElementById('back').onclick=()=>{running=false;document.getElementById('menu').classList.remove('hidden');['hud','controls','back','learn','hint'].forEach(id=>document.getElementById(id).classList.add('hidden'));document.getElementById('card').classList.remove('show')};
+document.getElementById('learn').onclick=()=>{if(hovered)showCard(hovered);else{document.querySelector('#card .cardTitle').textContent='📖 観察ガイド';document.querySelector('#card .cardText').textContent='黒点・プロミネンス・フレアを探して中央の照準を合わせよう。太陽へ近づくと、表面が少しずつ透けて内部構造が見えてきます。';document.getElementById('card').classList.add('show')}};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowUp')keys.up=true;if(e.key==='ArrowDown')keys.down=true;if(e.key==='ArrowLeft')keys.left=true;if(e.key==='ArrowRight')keys.right=true;if(e.key==='w'||e.key==='W')keys.w=true;if(e.key==='s'||e.key==='S')keys.s=true;if(e.key==='Shift')boost=true});
+document.addEventListener('keyup',e=>{if(e.key==='ArrowUp')keys.up=false;if(e.key==='ArrowDown')keys.down=false;if(e.key==='ArrowLeft')keys.left=false;if(e.key==='ArrowRight')keys.right=false;if(e.key==='w'||e.key==='W')keys.w=false;if(e.key==='s'||e.key==='S')keys.s=false;if(e.key==='Shift')boost=false});
+document.querySelectorAll('#controls button').forEach(b=>{let k=b.dataset.key;if(k==='boost'){b.onpointerdown=()=>boost=true;b.onpointerup=b.onpointercancel=()=>boost=false;return}b.onpointerdown=()=>keys[k]=true;b.onpointerup=b.onpointercancel=()=>keys[k]=false});
+canvas.addEventListener('pointerdown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!dragging)return;az+=(e.clientX-lx)*.35;el=clamp(el-(e.clientY-ly)*.25,-65,65);lx=e.clientX;ly=e.clientY});
+canvas.addEventListener('pointerup',()=>dragging=false);
+
+const inside=document.getElementById('inside');
+const layers=[
+ {n:'核',d:'水素の核融合が起こり、太陽のエネルギーのもとが生まれる。',x:50,y:50,s:22,c:'#ffe88b'},
+ {n:'放射層',d:'エネルギーが放射によって外側へ伝わる。',x:50,y:50,s:44,c:'#d97822'},
+ {n:'対流層',d:'高温のガスが上昇し、冷えると下降する対流が起こる。',x:50,y:50,s:60,c:'#b94b12'},
+ {n:'光球',d:'私たちが普段「太陽の表面」として見ている層。',x:50,y:50,s:78,c:'#ef8b24'},
+ {n:'彩層',d:'光球の上にある薄い大気の層。',x:50,y:50,s:87,c:'#b84913'},
+ {n:'コロナ',d:'太陽の外側に広がる非常に高温の大気。',x:50,y:50,s:96,c:'#6d86a8'}
+];
+layers.forEach((l,i)=>{let d=document.createElement('div');d.className='layer';d.textContent=l.n;d.style.left=l.x+'%';d.style.top=l.y+'%';d.style.width=l.s+'vmin';d.style.height=l.s+'vmin';d.style.background=`radial-gradient(circle,#ffffff10,${l.c}66)`;d.style.border='1px solid #ffffff55';d.style.zIndex=10-i;d.title=l.d;d.onclick=()=>{document.querySelector('#card .cardTitle').textContent='☀️ '+l.n;document.querySelector('#card .cardText').textContent=l.d;document.getElementById('card').classList.add('show')};inside.appendChild(d)});
+
+let lastInside=false;
+setInterval(()=>{let on=dist<.72;if(on!==lastInside){lastInside=on;inside.classList.toggle('active',on)}},100);
+
+const quiz=[
+['太陽は何という種類の天体？',['恒星','惑星','衛星','彗星'],0,'太陽は自ら光と熱を出している恒星です。'],
+['黒点が暗く見える理由は？',['周囲の光球より温度が低い','太陽の裏側だから','穴が開いている','光を吸収する物質だけでできている'],0,'黒点は周囲の光球より温度が低いため、相対的に暗く見えます。強い磁場が関係しています。'],
+['太陽のエネルギーの主な源は？',['水素の核融合','燃焼','地熱','電池'],0,'太陽の中心部では水素の核融合が起こり、巨大なエネルギーが生まれます。'],
+['光球とは？',['私たちが普段「太陽の表面」として見ている層','太陽の中心','太陽の外の宇宙空間','黒点だけの層'],0,'光球は可視光で見えている太陽の表面にあたる層です。'],
+['プロミネンスとは？',['太陽の縁から炎のように伸びる巨大なガスの構造','太陽の中心の核','惑星の輪','黒点の影'],0,'プロミネンスは太陽の縁から大きく伸びて見える、磁場に支えられた高温のガスの構造です。'],
+['フレアとは？',['太陽表面付近で起こる大規模な爆発現象','太陽の自転','太陽の影','流星'],0,'フレアでは短時間に大量のエネルギーが放出されます。'],
+['太陽は自転している？',['している','していない','1年に1回だけ','地球と同じ向きにしか動けない'],0,'太陽は自転しています。場所によって自転速度が異なる差動回転もします。'],
+['コロナとは？',['太陽の外側に広がる非常に高温の大気','太陽の核','黒点の集合','地球の大気'],0,'コロナは太陽の最も外側に広がる高温の大気で、皆既日食のときなどに見えます。']
+];
+let qi=0,score=0,answered=false;
+function openQuiz(){document.getElementById('menu').classList.add('hidden');document.getElementById('quiz').style.display='block';qi=0;score=0;renderQ()}
+function renderQ(){answered=false;let q=quiz[qi];document.getElementById('qnum').textContent=`${qi+1} / ${quiz.length}　スコア ${score}`;document.getElementById('question').textContent=q[0];document.getElementById('result').style.display='none';document.getElementById('next').style.display='none';let a=document.getElementById('answers');a.innerHTML='';q[1].forEach((x,i)=>{let b=document.createElement('button');b.textContent=`${String.fromCharCode(65+i)}　${x}`;b.onclick=()=>answer(i);a.appendChild(b)})}
+function answer(i){if(answered)return;answered=true;let q=quiz[qi],ok=i===q[2];if(ok)score++;let r=document.getElementById('result');r.style.display='block';r.innerHTML=(ok?'✅ 正解！':'❌ 不正解…')+'<br>'+q[3];document.getElementById('next').style.display='block'}
+document.getElementById('startQuiz').onclick=openQuiz;
+document.getElementById('next').onclick=()=>{qi++;if(qi>=quiz.length){document.getElementById('question').textContent=`🎉 クイズ終了！ ${quiz.length}問中 ${score}問正解！`;document.getElementById('answers').innerHTML='';document.getElementById('result').style.display='block';document.getElementById('result').innerHTML='太陽の観察に戻って、実際に黒点・プロミネンス・フレアを探してみよう！';document.getElementById('next').textContent='もう一度';document.getElementById('next').onclick=()=>{qi=0;score=0;document.getElementById('next').textContent='次の問題 →';document.getElementById('next').onclick=()=>{qi++;renderQ()};renderQ()}}else renderQ()};
+document.getElementById('quizClose').onclick=()=>{document.getElementById('quiz').style.display='none';document.getElementById('menu').classList.remove('hidden')};
+</script>
+</body>
+</html>
